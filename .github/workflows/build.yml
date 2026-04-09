@@ -6,6 +6,10 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+  actions: read
+
 jobs:
   build-linux:
     name: Build Linux Packages
@@ -28,8 +32,6 @@ jobs:
 
       - name: Build Linux packages
         run: npm run build:linux
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload AppImage
         uses: actions/upload-artifact@v4
@@ -76,8 +78,6 @@ jobs:
 
       - name: Build Windows packages
         run: npm run build:windows
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload NSIS Installer
         uses: actions/upload-artifact@v4
@@ -98,23 +98,27 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
 
     steps:
-      - name: Download Linux artifacts
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
+      - name: List downloaded artifacts
+        run: find artifacts/ -type f
+
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/**/*.AppImage
-            artifacts/**/*.deb
-            artifacts/**/*.rpm
-            artifacts/**/*.snap
-            artifacts/*Setup*.exe
-            artifacts/*Portable*.exe
+            artifacts/LocalFlix-AppImage/*.AppImage
+            artifacts/LocalFlix-deb/*.deb
+            artifacts/LocalFlix-rpm/*.rpm
+            artifacts/LocalFlix-snap/*.snap
+            artifacts/LocalFlix-Setup/*.exe
+            artifacts/LocalFlix-Portable/*.exe
           draft: false
           prerelease: false
           generate_release_notes: true
+          fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
