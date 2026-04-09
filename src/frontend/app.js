@@ -134,37 +134,79 @@ async function refreshMovies() {
 
 async function loadMovies() {
   showLoading();
-  
+
   const result = await window.electronAPI.scanMovies(directories);
-  
+
   if (result.success) {
     movies = result.movies;
     allProgress = await window.electronAPI.getAllProgress();
-    
+
     // Check if ffmpeg is available
     ffmpegAvailable = await window.electronAPI.checkFfmpeg();
-    
+
     // Clear thumbnail cache for new movie list
     thumbnailCache.clear();
     thumbnailsLoading.clear();
-    
+    observedElements.clear(); // Prevent memory leak from previous scans
+
     // Setup Intersection Observer for lazy thumbnail loading
     setupThumbnailObserver();
-    
+
     showMainScreen();
     renderDirectoryPills();
     applyFiltersAndRender();
     updateMovieCount();
+
+    // Show warning if ffmpeg is not available
+    if (!ffmpegAvailable) {
+      showFfmpegWarning();
+    }
   } else {
     alert('Error scanning movies: ' + result.error);
   }
-  
+
   hideLoading();
 }
 
 function showMainScreen() {
   directoryScreen.classList.remove('active');
   mainScreen.classList.add('active');
+}
+
+function showFfmpegWarning() {
+  // Check if warning already exists
+  if (document.getElementById('ffmpeg-warning')) return;
+
+  const warning = document.createElement('div');
+  warning.id = 'ffmpeg-warning';
+  warning.className = 'ffmpeg-warning';
+  warning.innerHTML = `
+    <div class="ffmpeg-warning-content">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      <span><strong>Thumbnails disabled:</strong> ffmpeg not found.</span>
+      <span class="ffmpeg-install-hint">Install ffmpeg for movie thumbnails:</span>
+      <code id="ffmpeg-cmd"></code>
+      <button class="ffmpeg-dismiss" onclick="document.getElementById('ffmpeg-warning').remove()">✕</button>
+    </div>
+  `;
+
+  // Show platform-specific install command
+  const cmdEl = warning.querySelector('#ffmpeg-cmd');
+  if (navigator.userAgent.includes('Windows')) {
+    cmdEl.textContent = 'winget install ffmpeg  (or download from ffmpeg.org)';
+  } else {
+    cmdEl.textContent = 'sudo apt install ffmpeg  (or your distro\'s package manager)';
+  }
+
+  // Insert after header
+  const header = document.querySelector('.header');
+  if (header && header.parentNode) {
+    header.parentNode.insertBefore(warning, header.nextSibling);
+  }
 }
 
 function handleSearch(e) {
@@ -320,7 +362,8 @@ function createMovieCard(movie, showProgress = false) {
   let posterStyle = '';
   if (thumbnailPath) {
     // thumbnailPath is already a proper file:// URL from main process
-    posterStyle = `background-image: url('${thumbnailPath}'), linear-gradient(135deg, #2c3e50 0%, #34495e 100%); background-size: cover, auto; background-position: center, center;`;
+    // Use double quotes to avoid issues with single quotes in Windows usernames (e.g. O'Connor)
+    posterStyle = `background-image: url("${thumbnailPath}"), linear-gradient(135deg, #2c3e50 0%, #34495e 100%); background-size: cover, auto; background-position: center, center;`;
   }
 
   // Use 'poster-loading' instead of 'loading' to avoid CSS class collision
@@ -443,8 +486,8 @@ function updateMovieCardThumbnail(movieId, thumbnailPath) {
 
   posterElements.forEach(poster => {
     // thumbnailPath is already a proper file:// URL from main process
-    // Layer thumbnail on top of gradient as fallback
-    poster.style.backgroundImage = `url('${thumbnailPath}'), linear-gradient(135deg, #2c3e50 0%, #34495e 100%)`;
+    // Layer thumbnail on top of gradient as fallback, use double quotes for paths with special chars
+    poster.style.backgroundImage = `url("${thumbnailPath}"), linear-gradient(135deg, #2c3e50 0%, #34495e 100%)`;
     poster.style.backgroundSize = 'cover, auto';
     poster.style.backgroundPosition = 'center, center';
     // Remove the poster-loading class (not 'loading' which is the global spinner)

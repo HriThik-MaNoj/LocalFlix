@@ -1,6 +1,6 @@
 const fs = require('fs').promises;
 const path = require('path');
-const { exec } = require('child_process');
+const { spawn } = require('child_process');
 
 class MovieScanner {
   constructor() {
@@ -8,8 +8,6 @@ class MovieScanner {
       '.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv',
       '.webm', '.m4v', '.mpg', '.mpeg', '.3gp', '.ogv'
     ]);
-    // Detect platform for shell command compatibility
-    this.isWindows = process.platform === 'win32';
   }
 
   async scanDirectory(directoryPath) {
@@ -54,25 +52,40 @@ class MovieScanner {
     }
   }
 
+  /**
+   * Get video duration using ffprobe via spawn (avoids cmd.exe issues on Windows)
+   */
   _getVideoDuration(videoPath) {
     return new Promise((resolve) => {
-      // Cross-platform path escaping
-      const escapedPath = this.isWindows
-        ? `"${videoPath}"`
-        : `"${videoPath.replace(/\\/g, '/')}"`;
+      const child = spawn('ffprobe', [
+        '-v', 'error',
+        '-show_entries', 'format=duration',
+        '-of', 'default=noprint_wrappers=1:nokey=1',
+        videoPath
+      ], {
+        windowsHide: true,
+        timeout: 5000,
+        shell: false
+      });
 
-      // Use cross-platform stderr redirection
-      const stderrRedirect = this.isWindows ? '2>nul' : '2>/dev/null';
-      const command = `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 ${escapedPath} ${stderrRedirect}`;
+      let stdout = '';
 
-      exec(command, { timeout: 5000, windowsHide: true }, (error, stdout) => {
-        if (error) {
+      child.stdout.on('data', (data) => { stdout += data.toString(); });
+
+      child.on('error', () => resolve(null));
+
+      child.on('close', (code) => {
+        if (code === 0) {
+          const duration = parseFloat(stdout.trim());
+          resolve(isNaN(duration) ? null : duration);
+        } else {
           resolve(null);
-          return;
         }
+      });
 
-        const duration = parseFloat(stdout.trim());
-        resolve(isNaN(duration) ? null : duration);
+      child.on('timeout', () => {
+        child.kill();
+        resolve(null);
       });
     });
   }
