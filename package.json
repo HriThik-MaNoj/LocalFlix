@@ -1,0 +1,130 @@
+{
+  "name": "localflix",
+  "version": "1.0.0",
+  "description": "A Netflix-like movie player and tracking application for Linux and Windows",
+  "main": "main.js",
+  "homepage": "https://github.com/HriThik-MaNoj/LocalFlix",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HriThik-MaNoj/LocalFlix.git"
+  },
+  "bugs": {
+    "url": "https://github.com/HriThik-MaNoj/LocalFlix/issues"
+  },
+  "author": {
+    "name": "HriThik MaNoj",
+    "email": "contact@localflix.app",
+    "url": "https://github.com/HriThik-MaNoj"
+  },
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "build:linux": "electron-builder --linux",
+    "build:windows": "electron-builder --win",
+    "build:appimage": "electron-builder --linux AppImage",
+    "build:deb": "electron-builder --linux deb",
+    "build:rpm": "electron-builder --linux rpm",
+    "build:snap": "electron-builder --linux snap",
+    "build:flatpak": "flatpak-builder --force-clean --repo=repo build-dir flatpak/com.localflix.app.yml",
+    "build:nsis": "electron-builder --win nsis",
+    "build:portable": "electron-builder --win portable",
+    "build:all": "electron-builder --linux --win --publish=never"
+  },
+  "keywords": ["movie", "player", "tracker", "linux"],
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.3",
+    "fluent-ffmpeg": "^2.1.2"
+  },
+  "build": {
+    "appId": "com.localflix.app",
+    "productName": "LocalFlix",
+    "artifactName": "${productName}-${version}-${arch}.${ext}",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "**/*",
+      "!**/*.md",
+      "!.github/**",
+      "!flatpak/**",
+      "!snap/**"
+    ],
+    "linux": {
+      "target": ["AppImage", "deb", "rpm", "snap"],
+      "category": "AudioVideo;Video;Player;",
+      "icon": "build",
+      "desktop": {
+        "Name": "LocalFlix",
+        "Comment": "Your Personal Movie Library",
+        "Keywords": "movie;video;player;stream;",
+        "StartupWMClass": "localflix"
+      },
+      "mimeTypes": [
+        "video/mp4",
+        "video/x-matroska",
+        "video/avi",
+        "video/quicktime",
+        "video/x-ms-wmv",
+        "video/x-flv",
+        "video/webm"
+      ]
+    },
+    "win": {
+      "target": ["nsis", "portable"],
+      "icon": "build/icon.png",
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "LocalFlix",
+      "include": "build/installer.nsh",
+      "artifactName": "${productName}-${version}-Setup-${arch}.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-Portable-${arch}.${ext}"
+    },
+    "snap": {
+      "summary": "Your Personal Movie Library",
+      "confinement": "strict",
+      "grade": "stable",
+      "base": "core22",
+      "plugs": [
+        "desktop",
+        "desktop-legacy",
+        "home",
+        "x11",
+        "unity7",
+        "browser-support",
+        "network",
+        "gsettings",
+        "pulseaudio",
+        "opengl",
+        "audio-playback",
+        "removable-media"
+      ]
+    },
+    "appImage": {
+      "artifactName": "${productName}-${version}-${arch}.AppImage",
+      "desktop": {
+        "Name": "LocalFlix",
+        "Comment": "Your Personal Movie Library"
+      }
+    },
+    "deb": {
+      "depends": ["libnss3", "libatk-bridge2.0-0", "libdrm2", "libgbm1", "libasound2", "libx11-xcb1"],
+      "priority": "optional",
+      "maintainer": "LocalFlix Team <contact@localflix.app>"
+    }
+  }
+}

@@ -1,0 +1,73 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/linux-unpacked/
+build/win-unpacked/
+
+# Database and user data
+*.db
+*.sqlite
+*.sqlite3
+localflix.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp
+*.temp
+
+# Flatpak build artifacts
+.flatpak-builder/
+build-dir/
+repo/
+
+# Snap artifacts
+*.snap
+
+# AppImage artifacts
+*.AppImage
+
+# Linux package artifacts
+*.deb
+*.rpm
+
+# Windows build artifacts
+*.exe
+!scripts/*.js
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Coverage and testing
+coverage/
+.nyc_output/
+
+# TypeScript
+*.ts
+!*.d.ts
+tsconfig.tsbuildinfo
+
+# Misc
+.cache/
+.temp/
+tmp/
+

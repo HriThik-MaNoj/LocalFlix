@@ -1,0 +1,51 @@
+name: localflix
+base: core22
+version: '1.0.0'
+summary: Your Personal Movie Library
+description: |
+  A Netflix-like movie player and tracking application for Linux.
+  Browse, play, and track your local movie collection with a beautiful interface.
+
+grade: stable
+confinement: strict
+
+parts:
+  localflix:
+    plugin: nodejs
+    source: .
+    nodejs-version: '22'
+    build-packages:
+      - build-essential
+      - python3
+    stage-packages:
+      - ffmpeg
+      - libnss3
+      - libatk-bridge2.0-0
+      - libdrm2
+      - libgbm1
+      - libasound2
+      - libx11-xcb1
+    override-build: |
+      npm install
+      npm run build
+      mkdir -p $SNAPCRAFT_PART_INSTALL/localflix
+      cp -r dist/linux-unpacked/* $SNAPCRAFT_PART_INSTALL/localflix/
+      cp -r dist/*.snap $SNAPCRAFT_PART_INSTALL/ || true
+
+apps:
+  localflix:
+    command: localflix/localflix
+    extensions: [gnome]
+    plugs:
+      - desktop
+      - desktop-legacy
+      - home
+      - x11
+      - unity7
+      - browser-support
+      - network
+      - gsettings
+      - pulseaudio
+      - opengl
+      - audio-playback
+      - removable-media

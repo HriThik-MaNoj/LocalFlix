@@ -1,0 +1,38 @@
+app-id: com.localflix.app
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+base: org.electronjs.Electron2.BaseApp
+base-version: '23.08'
+command: localflix
+separate-locales: false
+
+finish-args:
+  - --share=ipc
+  - --socket=x11
+  - --socket=pulseaudio
+  - --share=network
+  - --device=dri
+  - --filesystem=home
+  - --filesystem=xdg-run/media
+  - --filesystem=/run/media
+  - --filesystem=/media
+
+modules:
+  - name: ffmpeg
+    buildsystem: simple
+    build-commands: []
+    sources: []
+
+  - name: localflix
+    buildsystem: simple
+    build-commands:
+      - npm install
+      - npm run build
+      - mkdir -p /app/localflix
+      - cp -r dist/linux-unpacked/* /app/localflix/
+      - install -Dm644 build/icon.svg /app/share/icons/hicolor/scalable/apps/com.localflix.app.svg
+      - install -Dm644 build/localflix.desktop /app/share/applications/com.localflix.app.desktop
+    sources:
+      - type: dir
+        path: .

@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=LocalFlix
+Comment=Your Personal Movie Library
+Exec=localflix %U
+Icon=localflix
+Terminal=false
+Type=Application
+Categories=AudioVideo;Video;Player;
+MimeType=video/mp4;video/x-matroska;video/avi;video/quicktime;video/x-ms-wmv;video/x-flv;video/webm;video/x-m4v;video/mpeg;video/3gpp;video/ogg;
+Keywords=movie;video;player;stream;
+StartupWMClass=localflix
+SingleMainWindow=true
