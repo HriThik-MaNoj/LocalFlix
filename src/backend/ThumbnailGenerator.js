@@ -6,6 +6,7 @@ const { app } = require('electron');
 class ThumbnailGenerator {
   constructor() {
     this.cacheDir = path.join(app.getPath('userData'), 'thumbnails');
+    this.isWindows = process.platform === 'win32';
     this._initializeCache();
   }
 
@@ -25,7 +26,7 @@ class ThumbnailGenerator {
    */
   async generateThumbnail(videoPath, timestamp = null) {
     const thumbnailPath = this._getThumbnailPath(videoPath);
-    
+
     // Check if thumbnail already exists in cache
     try {
       await fs.access(thumbnailPath);
@@ -37,7 +38,7 @@ class ThumbnailGenerator {
     try {
       // First, try to get video duration
       const duration = await this._getVideoDuration(videoPath);
-      
+
       // If no timestamp specified, use 10% into the video (or 5 seconds for short videos)
       if (timestamp === null) {
         timestamp = duration ? Math.max(5, duration * 0.1) : 5;
@@ -45,7 +46,7 @@ class ThumbnailGenerator {
 
       // Generate thumbnail using ffmpeg
       await this._extractFrame(videoPath, thumbnailPath, timestamp);
-      
+
       return thumbnailPath;
     } catch (error) {
       console.error(`Error generating thumbnail for ${videoPath}:`, error.message);
@@ -81,9 +82,14 @@ class ThumbnailGenerator {
    */
   _getVideoDuration(videoPath) {
     return new Promise((resolve, reject) => {
-      // Escape quotes in path for Windows compatibility
-      const escapedPath = videoPath.replace(/"/g, '\\"');
-      const command = `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${escapedPath}"`;
+      // Cross-platform path escaping
+      const escapedPath = this.isWindows
+        ? `"${videoPath}"`
+        : `"${videoPath.replace(/\\/g, '/')}"`;
+
+      // Cross-platform stderr redirection
+      const stderrRedirect = this.isWindows ? '2>nul' : '2>/dev/null';
+      const command = `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 ${escapedPath} ${stderrRedirect}`;
 
       exec(command, { timeout: 10000, windowsHide: true }, (error, stdout, stderr) => {
         if (error) {
@@ -102,11 +108,20 @@ class ThumbnailGenerator {
    */
   _extractFrame(videoPath, outputPath, timestamp) {
     return new Promise((resolve, reject) => {
-      // Escape quotes in paths for Windows compatibility
-      const escapedInput = videoPath.replace(/"/g, '\\"');
-      const escapedOutput = outputPath.replace(/"/g, '\\"');
+      // Cross-platform path escaping
+      const escapedInput = this.isWindows
+        ? `"${videoPath}"`
+        : `"${videoPath.replace(/\\/g, '/')}"`;
+
+      const escapedOutput = this.isWindows
+        ? `"${outputPath}"`
+        : `"${outputPath.replace(/\\/g, '/')}"`;
+
+      // Cross-platform stderr redirection
+      const stderrRedirect = this.isWindows ? '2>nul' : '2>/dev/null';
+
       // Use ffmpeg to extract a single frame with better compatibility
-      const command = `ffmpeg -ss ${timestamp} -i "${escapedInput}" -vframes 1 -vf "scale=480:270:force_original_aspect_ratio=decrease,pad=480:270:(ow-iw)/2:(oh-ih)/2:black" -y -q:v 5 "${escapedOutput}" 2>/dev/null`;
+      const command = `ffmpeg -ss ${timestamp} -i ${escapedInput} -vframes 1 -vf "scale=480:270:force_original_aspect_ratio=decrease,pad=480:270:(ow-iw)/2:(oh-ih)/2:black" -y -q:v 5 ${escapedOutput} ${stderrRedirect}`;
 
       exec(command, { timeout: 30000, maxBuffer: 1024 * 1024 * 10, windowsHide: true }, (error, stdout, stderr) => {
         if (error) {
@@ -127,10 +142,19 @@ class ThumbnailGenerator {
    */
   _extractFrameFallback(videoPath, outputPath, timestamp) {
     return new Promise((resolve, reject) => {
-      // Escape quotes in paths for Windows compatibility
-      const escapedInput = videoPath.replace(/"/g, '\\"');
-      const escapedOutput = outputPath.replace(/"/g, '\\"');
-      const command = `ffmpeg -i "${escapedInput}" -ss ${timestamp} -vframes 1 -q:v 5 "${escapedOutput}" 2>/dev/null`;
+      // Cross-platform path escaping
+      const escapedInput = this.isWindows
+        ? `"${videoPath}"`
+        : `"${videoPath.replace(/\\/g, '/')}"`;
+
+      const escapedOutput = this.isWindows
+        ? `"${outputPath}"`
+        : `"${outputPath.replace(/\\/g, '/')}"`;
+
+      // Cross-platform stderr redirection
+      const stderrRedirect = this.isWindows ? '2>nul' : '2>/dev/null';
+
+      const command = `ffmpeg -i ${escapedInput} -ss ${timestamp} -vframes 1 -q:v 5 ${escapedOutput} ${stderrRedirect}`;
 
       exec(command, { timeout: 30000, maxBuffer: 1024 * 1024 * 10, windowsHide: true }, (error) => {
         if (error) {
@@ -161,8 +185,19 @@ class ThumbnailGenerator {
    */
   static async isFfmpegAvailable() {
     return new Promise((resolve) => {
-      exec('ffmpeg -version', (error) => {
-        resolve(!error);
+      // Cross-platform check: try 'where' on Windows, 'which' on Linux
+      const command = process.platform === 'win32' ? 'where ffmpeg' : 'which ffmpeg';
+
+      exec(command, { windowsHide: true }, (error) => {
+        if (!error) {
+          resolve(true);
+          return;
+        }
+
+        // Fallback: try running ffmpeg directly
+        exec('ffmpeg -version', { timeout: 5000, windowsHide: true }, (err) => {
+          resolve(!err);
+        });
       });
     });
   }

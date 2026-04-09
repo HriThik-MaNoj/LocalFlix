@@ -5,9 +5,11 @@ const { exec } = require('child_process');
 class MovieScanner {
   constructor() {
     this.videoExtensions = new Set([
-      '.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', 
+      '.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv',
       '.webm', '.m4v', '.mpg', '.mpeg', '.3gp', '.ogv'
     ]);
+    // Detect platform for shell command compatibility
+    this.isWindows = process.platform === 'win32';
   }
 
   async scanDirectory(directoryPath) {
@@ -19,13 +21,13 @@ class MovieScanner {
   async _scanRecursive(dirPath, movies) {
     try {
       const entries = await fs.readdir(dirPath, { withFileTypes: true });
-      
+
       for (const entry of entries) {
         const fullPath = path.join(dirPath, entry.name);
-        
+
         if (entry.isDirectory()) {
           // Skip hidden directories and common non-media folders
-          if (!entry.name.startsWith('.') && 
+          if (!entry.name.startsWith('.') &&
               !['node_modules', '.git', '__pycache__'].includes(entry.name)) {
             await this._scanRecursive(fullPath, movies);
           }
@@ -54,9 +56,14 @@ class MovieScanner {
 
   _getVideoDuration(videoPath) {
     return new Promise((resolve) => {
-      // Escape quotes in path for Windows compatibility
-      const escapedPath = videoPath.replace(/"/g, '\\"');
-      const command = `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${escapedPath}"`;
+      // Cross-platform path escaping
+      const escapedPath = this.isWindows
+        ? `"${videoPath}"`
+        : `"${videoPath.replace(/\\/g, '/')}"`;
+
+      // Use cross-platform stderr redirection
+      const stderrRedirect = this.isWindows ? '2>nul' : '2>/dev/null';
+      const command = `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 ${escapedPath} ${stderrRedirect}`;
 
       exec(command, { timeout: 5000, windowsHide: true }, (error, stdout) => {
         if (error) {
