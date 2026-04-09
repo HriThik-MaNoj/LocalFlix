@@ -304,21 +304,28 @@ function renderContinueWatching(movieList) {
 function createMovieCard(movie, showProgress = false) {
   const card = document.createElement('div');
   card.className = 'movie-card';
-  
+
   const progress = allProgress.find(p => p.movie_path === movie.path);
-  const progressPercent = progress && progress.duration > 0 
-    ? (progress.current_time / progress.duration) * 100 
+  const progressPercent = progress && progress.duration > 0
+    ? (progress.current_time / progress.duration) * 100
     : 0;
   const isCompleted = progress && progress.completed;
-  
+
+  // thumbnailPath from cache is ALREADY a file:// URL from the main process
   const thumbnailPath = thumbnailCache.get(movie.id);
   const isLoading = thumbnailsLoading.has(movie.id);
-  const posterStyle = thumbnailPath 
-    ? `background-image: url('file://${thumbnailPath}'); background-size: cover; background-position: center;`
-    : '';
-  
+
+  // Build poster style with gradient fallback
+  // If thumbnail is available, layer it on top of the gradient as fallback
+  let posterStyle = '';
+  if (thumbnailPath) {
+    // thumbnailPath is already a proper file:// URL from main process
+    posterStyle = `background-image: url('${thumbnailPath}'), linear-gradient(135deg, #2c3e50 0%, #34495e 100%); background-size: cover, auto; background-position: center, center;`;
+  }
+
+  // Use 'poster-loading' instead of 'loading' to avoid CSS class collision
   card.innerHTML = `
-    <div class="movie-poster ${!thumbnailPath ? 'loading' : ''}" style="${posterStyle}" data-movie-id="${movie.id}">
+    <div class="movie-poster ${!thumbnailPath ? 'poster-loading' : ''}" style="${posterStyle}" data-movie-id="${movie.id}">
       ${!thumbnailPath ? `
       <div class="poster-placeholder">
         ${isLoading ? `
@@ -435,11 +442,13 @@ function updateMovieCardThumbnail(movieId, thumbnailPath) {
   const posterElements = document.querySelectorAll(`.movie-poster[data-movie-id="${movieId}"]`);
 
   posterElements.forEach(poster => {
-    // thumbnailPath is already a file:// URL from the main process
-    poster.style.backgroundImage = `url('${thumbnailPath}')`;
-    poster.style.backgroundSize = 'cover';
-    poster.style.backgroundPosition = 'center';
-    poster.classList.remove('loading');
+    // thumbnailPath is already a proper file:// URL from main process
+    // Layer thumbnail on top of gradient as fallback
+    poster.style.backgroundImage = `url('${thumbnailPath}'), linear-gradient(135deg, #2c3e50 0%, #34495e 100%)`;
+    poster.style.backgroundSize = 'cover, auto';
+    poster.style.backgroundPosition = 'center, center';
+    // Remove the poster-loading class (not 'loading' which is the global spinner)
+    poster.classList.remove('poster-loading');
 
     // Remove the placeholder SVG
     const placeholder = poster.querySelector('.poster-placeholder');

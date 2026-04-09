@@ -120,13 +120,11 @@ ipcMain.handle('generate-thumbnail', async (event, videoPath) => {
   try {
     const thumbnailPath = await thumbnailGenerator.generateThumbnail(videoPath);
     if (thumbnailPath) {
-      // Convert to file:// URL for cross-platform compatibility
-      let fileUrl = thumbnailPath;
-      if (process.platform === 'win32') {
-        fileUrl = 'file:///' + thumbnailPath.replace(/\\/g, '/');
-      } else {
-        fileUrl = 'file://' + thumbnailPath;
-      }
+      // Convert to properly encoded file:// URL for cross-platform compatibility
+      const normalizedPath = thumbnailPath.replace(/\\/g, '/');
+      const fileUrl = process.platform === 'win32'
+        ? 'file:///' + encodeURI(normalizedPath)
+        : 'file://' + encodeURI(normalizedPath);
       return { success: true, thumbnailPath: fileUrl };
     }
     return { success: false, error: 'Failed to generate thumbnail' };
@@ -149,9 +147,10 @@ ipcMain.handle('check-ffmpeg', async () => {
 });
 
 ipcMain.handle('path-to-url', async (event, filePath) => {
-  // Convert file path to proper file:// URL for cross-platform compatibility
+  // Convert file path to properly encoded file:// URL for cross-platform compatibility
+  const normalizedPath = filePath.replace(/\\/g, '/');
   if (process.platform === 'win32') {
-    return 'file:///' + filePath.replace(/\\/g, '/');
+    return 'file:///' + encodeURI(normalizedPath);
   }
-  return 'file://' + filePath;
+  return 'file://' + encodeURI(normalizedPath);
 });

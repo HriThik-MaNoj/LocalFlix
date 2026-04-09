@@ -359,7 +359,7 @@ body {
   border-radius: 10px;
   overflow: hidden;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease, border-color 0.3s ease;
   border: 1px solid var(--border-color);
 }
 
@@ -368,6 +368,21 @@ body {
   box-shadow: var(--shadow-lg);
   z-index: 10;
   border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Poster loading state - when thumbnail is not yet available */
+.movie-poster.poster-loading {
+  /* Keep normal poster dimensions, do NOT apply min-height */
+  position: relative;
+}
+
+.movie-poster.poster-loading .poster-placeholder {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
 
 .movie-poster {
